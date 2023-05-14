@@ -1,0 +1,44 @@
+---
+- name: Configure Cloud Security
+  hosts: all
+  become: true
+
+  tasks:
+    - name: Enable Firewall
+      ufw:
+        state: enabled
+
+    - name: Allow SSH, HTTP, and HTTPS connections
+      ufw:
+        rule: allow
+        port: "{{ item }}"
+        state: enabled
+      loop:
+        - ssh
+        - http
+        - https
+
+    - name: Allow MySQL connections
+      ufw:
+        rule: allow
+        port: 3306
+        proto: tcp
+        state: enabled
+
+    - name: Install Fail2ban
+      apt:
+        name: fail2ban
+        state: present
+
+    - name: Configure Fail2ban
+      copy:
+        src: /etc/fail2ban/jail.conf
+        dest: /etc/fail2ban/jail.local
+        mode: '0644'
+      notify:
+        - restart fail2ban
+
+  handlers:
+    - name: restart fail2ban
+      service:
+

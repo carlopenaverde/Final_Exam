@@ -1,0 +1,73 @@
+- name: Configure firewall
+  hosts: all
+  become: true
+
+  vars:
+    firewall_enabled: true
+
+  tasks:
+    - name: Allow SSH, HTTP, and HTTPS connections
+      ufw:
+        rule: allow
+        port: "{{ item }}"
+        state: enabled
+      loop:
+        - ssh
+        - http
+        - https
+      when: firewall_enabled
+
+    - name: Allow PostgreSQL connections
+      ufw:
+        rule: allow
+        port: 5432
+        proto: tcp
+        state: enabled
+      when: firewall_enabled
+
+    - name: Deny all other incoming traffic
+      ufw:
+        rule: deny
+        state: enabled
+      when: firewall_enabled
+
+
+- name: Encrypt a file
+  hosts: all
+  gather_facts: false
+
+  vars:
+    secret_message: "My secret message"
+
+  tasks:
+    - name: Create file with secret message
+      copy:
+        content: "{{ secret_message }}"
+        dest: /tmp/secret_message.txt
+
+    - name: Encrypt file
+      ansible.builtin.command: >
+        ansible-vault encrypt /tmp/secret_message.txt
+      args:
+        creates: /tmp/secret_message.txt
+
+    - name: Show encrypted file
+      ansible.builtin.command: cat /tmp/secret_message.txt
+      register: encrypted_file_output
+
+    - name: Decrypt file
+      ansible.builtin.command: >
+        ansible-vault decrypt /tmp/secret_message.txt
+      args:
+        creates: /tmp/secret_message.txt
+
+    - name: Show decrypted file
+      ansible.builtin.command: cat /tmp/secret_message.txt
+      register: decrypted_file_output
+
+    - name: Display outputs
+      debug:
+        var: item.stdout
+      loop:
+        - "{{ encrypted_file_output }}"
+        - "{{ decrypted_file_output }}"
